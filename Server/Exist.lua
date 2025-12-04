@@ -56,13 +56,12 @@ function SetTable()
 end
 
 local KeysDone = {}
-Players.PlayerAdded:Connect(function(Player: Player)
-	task.wait(20)
-	if not Player then 
+function PlayerAdded(self)
+	if not self.Profile then 
 		return 
 	end
 
-	local PlrData = DataManager.Profiles[Player.UserId].Profile
+	local PlrData = self.Profile
 	if not PlrData or not PlrData.Data then 
 		return 
 	end
@@ -110,7 +109,7 @@ Players.PlayerAdded:Connect(function(Player: Player)
 			end
 		end
 	end
-end)
+end
 
 script.DecreaseExist.Event:Connect(function(Name: string, Count: number)
 	task.wait(20)
@@ -132,4 +131,4 @@ task.spawn(function()
 		SetTable()
 		task.wait(1600)
 	end
-end
+end)
