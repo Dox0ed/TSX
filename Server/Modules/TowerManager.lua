@@ -9,7 +9,6 @@ local Configs = ReplicatedStorage.Configs
 
 local TowerConfig = require(Configs.TowerConfig)
 local MainConfig = require(Configs.MainConfig)
-local DataManager = require(Modules.DataManager)
 
 local DecreaseExistEvent = ServerScriptService:WaitForChild("Exist"):WaitForChild("DecreaseExist")
 
@@ -27,12 +26,12 @@ end
 --// Class
 local TowerManager = {}
 
-function TowerManager.AddTower(Player: Player?, Name: string, Amount: number, OtherSettings: any)
-	if not Player then
+function TowerManager:AddTower(Name: string, Amount: number, OtherSettings: any)
+	if not self.Replica then
 		return
 	end
 	
-	local PlrData = DataManager.Profiles[Player.UserId].Profile
+	local PlrData = self.Replica
 	if not PlrData or not PlrData.Data then
 		return
 	end
@@ -41,22 +40,20 @@ function TowerManager.AddTower(Player: Player?, Name: string, Amount: number, Ot
 	for _ = 1, Amount do
 		ID = GenerateID(PlrData.Data.Towers)
 
-		PlrData.Data.Towers[ID] = {
+		PlrData:Set({"Towers", ID}, {
 			Name = Name,
 			Settings = OtherSettings
-		}
+		})
 	end
-	
-	DataManager.Profiles[Player.UserId].Replica:Set({"Towers"}, PlrData.Data.Towers)
-	return ID
+	PlrData:Set({"Towers"}, PlrData.Data.Towers)
 end
 
-function TowerManager.RemoveTower(Player: Player?, SellTable, GiveCash: boolean)
-	if not Player then
+function TowerManager:RemoveTower(SellTable, GiveCash: boolean)
+	if not self.Replica then
 		return
 	end
 	
-	local PlrData = DataManager.Profiles[Player.UserId].Profile
+	local PlrData = self.Replica
 	if not PlrData or not PlrData.Data then
 		return
 	end
@@ -70,7 +67,7 @@ function TowerManager.RemoveTower(Player: Player?, SellTable, GiveCash: boolean)
 		for _ = Stack, 1, -1 do
 			for ID, Tower in PlrData.Data.Towers do
 				if Tower.Name == TowerName then
-					PlrData.Data.Towers[ID] = nil
+					PlrData:Set({"Towers", ID}, nil)
 					RealStack += 1
 					break
 				end
@@ -83,22 +80,20 @@ function TowerManager.RemoveTower(Player: Player?, SellTable, GiveCash: boolean)
 				return
 			end
 
-			PlrData.Data.Cash += (MainConfig.SellPrices[TowerConfig.Rarity] * RealStack)
+			PlrData:Set({"Cash"}, PlrData.Data.Cash + (MainConfig.SellPrices[TowerConfig.Rarity] * RealStack))
 			DecreaseExistEvent:Fire(TowerName, RealStack)
 		end
 	end
 	
-	DataManager.Profiles[Player.UserId].Replica:Set({"Cash"}, PlrData.Data.Cash)
-	DataManager.Profiles[Player.UserId].Replica:Set({"Towers"}, PlrData.Data.Towers)
-	return true
+	PlrData:Set({"Towers"}, PlrData.Data.Towers)
 end
 
-function TowerManager.EquipTower(Player: Player?, ID: string)
-	if not Player then
+function TowerManager:EquipTower(ID: string)
+	if not self.Replica then
 		return
 	end
 
-	local PlrData = DataManager.Profiles[Player.UserId].Profile
+	local PlrData = self.Replica
 	if not PlrData or not PlrData.Data then
 		return
 	end
@@ -107,12 +102,11 @@ function TowerManager.EquipTower(Player: Player?, ID: string)
 		for id, Tower in PlrData.Data.Towers do
 			if Tower.Equipped  then
 				PlrData.Data.Towers[id].Equipped = false
-				DataManager.Profiles[Player.UserId].Replica:Set({"Towers", id}, PlrData.Data.Towers[id])
+				self.Replica:Set({"Towers", id, "Equipped"}, false)
 			end
 		end
-		
-		DataManager.Profiles[Player.UserId].Replica:Set({"Towers"}, PlrData.Data.Towers)
-		return true
+		PlrData:Set({"Towers"}, PlrData.Data.Towers)
+		return
 	end
 	
 	if not PlrData.Data.Towers[ID] then
@@ -120,12 +114,13 @@ function TowerManager.EquipTower(Player: Player?, ID: string)
 	end
 	
 	if PlrData.Data.Towers[ID]["Equipped"] then
-		PlrData.Data.Towers[ID].Equipped = nil
+		self.Replica:Set({"Towers", ID, "Equipped"}, false)
+		PlrData:Set({"Towers"}, PlrData.Data.Towers)
 	else
 		local TowerName = PlrData.Data.Towers[ID].Name
 		for _, Tower in PlrData.Data.Towers do
 			if Tower.Name == TowerName and Tower["Equipped"] then
-				return false
+				return
 			end
 		end
 		
@@ -153,11 +148,10 @@ function TowerManager.EquipTower(Player: Player?, ID: string)
 			return
 		end
 		
-		PlrData.Data.Towers[ID].Equipped = SlotNum
+		self.Replica:Set({"Towers", ID, "Equipped"}, SlotNum)
 	end
 	
-	DataManager.Profiles[Player.UserId].Replica:Set({"Towers"}, PlrData.Data.Towers)
-	return true
+	PlrData:Set({"Towers"}, PlrData.Data.Towers)
 end
 
 return TowerManager
