@@ -2,14 +2,14 @@
 local Players = game:GetService("Players")
 local ServerScriptService = game:GetService("ServerScriptService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local camera = game.Workspace.CurrentCamera
+local p1 = game.Workspace.part1
 
 local Modules = ServerScriptService.Modules
 local Configs = ReplicatedStorage.Configs
 
 local TowerConfig = require(Configs.TowerConfig)
 local MainConfig = require(Configs.MainConfig)
-local DataManager = require(Modules.DataManager)
-local TowerManager = require(Modules.TowerManager)
 
 local Remotes = ReplicatedStorage.Remotes
 local SummonRemotes = Remotes.Summon
@@ -100,8 +100,8 @@ function ChooseTowers(Amount: number, Luck: number)
 	return ChoosedTowers
 end
 
-function SummonManager.Summon(Player: Player?, Amount: number, Banner: string?)
-	if not Player or Cooldown[Player] then
+function SummonManager:Summon(Amount: number, Banner: string?)
+	if not self.Player or Cooldown[self.Player] then
 		return
 	end
 	
@@ -109,7 +109,7 @@ function SummonManager.Summon(Player: Player?, Amount: number, Banner: string?)
 		Banner = "Default"
 	end
 	
-	local PlrData = DataManager.Profiles[Player.UserId].Profile
+	local PlrData = self.Replica
 	if not PlrData or not PlrData.Data then
 		return
 	end
@@ -121,23 +121,24 @@ function SummonManager.Summon(Player: Player?, Amount: number, Banner: string?)
 	local Price = if Amount == 1 then 100 else 900
 	if Banner == "Boosted" then Price *= 3 end
 	if PlrData.Data.Cash < Price then
+		ReplicatedStorage.Remotes.Misc.Notify:FireClient(self.Player, "Not enough cash.", {255, 0, 0})
 		return
 	end
 	
-	PlrData.Data.Cash -= Price
+	self.Replica:Set({"Cash"}, PlrData.Data.Cash - Price)
 	
 	task.delay(2, function()
-		Cooldown[Player] = nil
+		Cooldown[self.Player] = nil
 	end)
 	
 	local ChoosedTowers = ChooseTowers(Amount, if Banner == "Boosted" then PlrData.Data.Stats.Luck * 2 else PlrData.Data.Stats.Luck)
 	
 	for _, TowerName in ChoosedTowers do
-		TowerManager.AddTower(Player, TowerName, 1, nil)
+		self:AddTower(TowerName, 1, nil)
 	end
 	
-	DataManager.Profiles[Player.UserId].Replica:Set({"Cash"}, PlrData.Data.Cash)
-	SummonRemotes.AskSummon:FireClient(Player, ChoosedTowers)
+	SummonRemotes.AskSummon:FireClient(self.Player, ChoosedTowers)
+	ReplicatedStorage.Remotes.Misc.Notify:FireClient(self.Player, `Successfully rolled {Amount} tower(s).`, {0, 255, 0})
 	return true
 end
 
