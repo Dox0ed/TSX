@@ -8,45 +8,41 @@ local Modules = ServerScriptService.Modules
 local Configs = ReplicatedStorage.Configs
 
 local ShopConfig = require(Configs.ShopConfig)
-local DataManager = require(Modules.DataManager)
-local TowerManager = require(Modules.TowerManager)
 
 local DevFunctions = {
-	[ShopConfig.DevProducts.Cash100] = function(Player: Player?, PlrData: any)
-		PlrData.Data.Cash += 100
-		DataManager.Profiles[Player.UserId].Replica:Set({"Cash"}, PlrData.Data.Cash)
+	[ShopConfig.DevProducts.Cash100] = function(self)
+		self.Replica:Set({"Cash"}, self.Replica.Data.Cash + 100)
 	end,
 
-	[ShopConfig.DevProducts.ExclusiveTower1] = function(Player: Player?, PlrData: any)
-		TowerManager.AddTower(Player, "DonateTowerUWU", 1, nil)
+	[ShopConfig.DevProducts.ExclusiveTower1] = function(self)
+		self:AddTower("DonateTowerUWU", 1, nil)
 	end
 }
 
 local PassFunctions = {
-	[ShopConfig.Passes.LuckX2] = function(Player: Player?, PlrData: any)
-		PlrData.Data.Stats.Luck += 1
-		DataManager.Profiles[Player.UserId].Replica:Set({"Stats"}, PlrData.Data.Stats)
-	end,
+	[ShopConfig.Passes.LuckX2] = function(self)
+		self.Replica:Set({"Stats"}, self.Replica.Data.Stats.Luck + 1)
+	end
 }
 
 --// Class
 local ShopManager = {}
 
-function ShopManager.ReceiptProccess(ReceiptInfo)
-	local PlrData = DataManager.Profiles[ReceiptInfo.PlayerId].Profile
+function ShopManager:ReceiptProccess(ReceiptInfo)
+	local PlrData = self.Replica
 	if not PlrData or not PlrData.Data then
 		return Enum.ProductPurchaseDecision.NotProcessedYet
 	end
 
 	PlrData.Data.Spent += ReceiptInfo.CurrencySpent
 
-	DevFunctions[ReceiptInfo.ProductId](Players:GetPlayerByUserId(ReceiptInfo.PlayerId), PlrData)
+	DevFunctions[ReceiptInfo.ProductId](Players:GetPlayerByUserId(self))
 
 	return Enum.ProductPurchaseDecision.PurchaseGranted
 end
 
-function ShopManager.CheckPass(Player: Player?, GamePassID: number)
-	if not MarketplaceService:UserOwnsGamePassAsync(Player.UserId, GamePassID) then
+function ShopManager:CheckPass(GamePassID: number)
+	if not MarketplaceService:UserOwnsGamePassAsync(self.Player.UserId, GamePassID) then
 		return
 	end
 
@@ -62,14 +58,14 @@ function ShopManager.CheckPass(Player: Player?, GamePassID: number)
 		return
 	end
 
-	local PlrData = DataManager.Profiles[Player.UserId].Profile
+	local PlrData = self.Replica
 	if not PlrData or not PlrData.Data or PlrData.Data.PurchasedPasses[PassName] == true then
 		return
 	end
 
-	PlrData.Data.PurchasedPasses[PassName] = true
+	PlrData:Set({"PurchasedPasses", PassName}, true)
 
-	PassFunctions[GamePassID](Player, PlrData)
+	PassFunctions[GamePassID](self)
 end
 
 return ShopManager
