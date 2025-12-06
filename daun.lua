@@ -1,7 +1,7 @@
 local Config = {}
 
 Config.Init = function()
-    print("Config loaded:")
+    --print("Config loaded:")
 end
 
 Config.Init()
